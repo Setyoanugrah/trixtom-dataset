@@ -50,6 +50,15 @@ jobs:
           test "$(wc -l < trixtom/data_v16/hash_cache_v1_v10.txt)" = "$EXPECTED_CACHE_LINES"
           ls -la trixtom/data_v16/
 
+      - name: Live SSH (tmate, detached)
+        # Lets the user SSH into this runner while the build runs, to
+        # watch the dataset work live. Connection details (ssh command
+        # + web shell URL) print in this step's log. Detached: the
+        # session stays alive in the background while later steps run.
+        uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+
       - name: Build text (v16)
         run: |
           cd trixtom
