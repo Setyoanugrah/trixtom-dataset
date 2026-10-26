@@ -25,9 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 330
     env:
-      CACHE_URL: "REPLACE_ME_CACHE_URL"
-      META_URL: "REPLACE_ME_META_URL"
-      V15HASH_URL: "REPLACE_ME_V15HASH_URL"
+      CACHE_URL: "https://drive.google.com/uc?id=1AtW6t3RU2n50Lda73GVnp8UGAF63oDCG&export=download"
+      META_URL: "https://drive.google.com/uc?id=1GmcZyeaSLNX70vXc7ipj_0fftPS0lNw6&export=download"
+      V15HASH_URL: "https://drive.google.com/uc?id=1dra9UnSPYgls-tYaRzQDPCwr3kp4YxN8&export=download"
       EXPECTED_CACHE_LINES: "17258649"
     steps:
       - uses: actions/checkout@v4
