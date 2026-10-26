@@ -1,0 +1,8 @@
+datasets
+pyarrow
+fsspec
+aiohttp
+huggingface_hub
+tokenizers
+numpy
+gdown

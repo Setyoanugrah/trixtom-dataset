@@ -1,0 +1,94 @@
+name: dataset-v16
+
+# Trixtom dataset batch v16 (HPLT-id + Taiga-ru + mC4), built on a
+# GitHub-hosted runner (4 vCPU / 16 GB RAM) instead of the 2-CPU VM.
+# Triggered manually; the v15 packer on the VM must be finished first
+# (v16's cross-check needs v15's final text hashes).
+#
+# Inputs come from Google Drive ("anyone with the link", read-only):
+#   CACHE_URL  — pre-extended hash cache, v1-v14 hashes (17,258,649 lines)
+#   META_URL   — hash_cache_meta.json (inventory + extra_done)
+#   V15HASH_URL — v15 kept-doc hashes (one SHA256 hex per line)
+# Outputs go to a GitHub release (tag v16): 4 packed shards, manifest,
+# progress, README, v16_hashes.txt (for v17's cross-check), logs.
+# The main agent then downloads the release assets and uploads them to
+# Drive, verifying SHA256 against the manifest.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      CACHE_URL: "REPLACE_ME_CACHE_URL"
+      META_URL: "REPLACE_ME_META_URL"
+      V15HASH_URL: "REPLACE_ME_V15HASH_URL"
+      EXPECTED_CACHE_LINES: "17258649"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r trixtom/dataset_build/requirements.txt
+
+      - name: Download inputs from Drive
+        run: |
+          mkdir -p trixtom/data_v16
+          gdown --fuzzy "$CACHE_URL" -O trixtom/data_v16/hash_cache_v1_v10.txt
+          gdown --fuzzy "$META_URL" -O trixtom/data_v16/hash_cache_meta.json
+          gdown --fuzzy "$V15HASH_URL" -O trixtom/data_v16/v15_hashes.txt
+          echo "--- line counts ---"
+          wc -l trixtom/data_v16/hash_cache_v1_v10.txt trixtom/data_v16/v15_hashes.txt
+          test "$(wc -l < trixtom/data_v16/hash_cache_v1_v10.txt)" = "$EXPECTED_CACHE_LINES"
+          ls -la trixtom/data_v16/
+
+      - name: Build text (v16)
+        run: |
+          cd trixtom
+          python dataset_build/build_text_v16.py 2>&1 | tee data_v16/build_text_v16_stdout.log
+
+      - name: Cross-check vs v15
+        run: |
+          cd trixtom
+          python dataset_build/dedupe_v16_vs_v15_gha.py 2>&1 | tee data_v16/crosscheck_v15.log
+
+      - name: Pack
+        run: |
+          cd trixtom
+          python dataset_build/tokenize_pack_v16.py 2>&1 | tee data_v16/pack_v16.log
+
+      - name: Hash v16 text (for v17 cross-check)
+        run: |
+          cd trixtom
+          python dataset_build/hash_text_dir.py data_v16/text data_v16/v16_hashes.txt
+          wc -l data_v16/v16_hashes.txt
+
+      - name: Publish release v16
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd trixtom
+          ls -la data_v16/packed/ data_v16/*.json
+          gh release create v16 \
+            --title "Dataset v16" \
+            --notes "Trixtom dataset batch v16 (HPLT-id + Taiga-ru + mC4). See manifest.json for token counts and shard SHA256." \
+            data_v16/packed/shard-*.bin \
+            data_v16/manifest.json \
+            data_v16/progress.json \
+            data_v16/v16_hashes.txt \
+            data_v16/crosscheck_v15.json \
+            data_v16/build_text_v16_stdout.log \
+            data_v16/pack_v16.log
+
+      - name: Summary
+        run: |
+          python3 -c "import json; m=json.load(open('trixtom/data_v16/manifest.json')); print('v16 tokens:', m.get('total_tokens'), 'seqs:', m.get('total_sequences'))"
+          df -h / | tail -1
