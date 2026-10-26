@@ -42,9 +42,9 @@ jobs:
       - name: Download inputs from Drive
         run: |
           mkdir -p trixtom/data_v16
-          gdown --fuzzy "$CACHE_URL" -O trixtom/data_v16/hash_cache_v1_v10.txt
-          gdown --fuzzy "$META_URL" -O trixtom/data_v16/hash_cache_meta.json
-          gdown --fuzzy "$V15HASH_URL" -O trixtom/data_v16/v15_hashes.txt
+          gdown "$CACHE_URL" -O trixtom/data_v16/hash_cache_v1_v10.txt
+          gdown "$META_URL" -O trixtom/data_v16/hash_cache_meta.json
+          gdown "$V15HASH_URL" -O trixtom/data_v16/v15_hashes.txt
           echo "--- line counts ---"
           wc -l trixtom/data_v16/hash_cache_v1_v10.txt trixtom/data_v16/v15_hashes.txt
           test "$(wc -l < trixtom/data_v16/hash_cache_v1_v10.txt)" = "$EXPECTED_CACHE_LINES"
